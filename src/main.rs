@@ -1,10 +1,9 @@
+mod k8s;
 mod routes;
 mod types;
 
 use actix_web::{App, HttpServer};
 use routes::*;
-use std::env;
-use types::*;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

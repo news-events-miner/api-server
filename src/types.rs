@@ -9,7 +9,6 @@ pub struct Job {
 #[derive(Deserialize, Serialize)]
 pub struct NewJob {
     pub name: String,
-    pub param1: String,
 }
 
 #[derive(Deserialize, Clone)]
