@@ -1,17 +1,13 @@
+mod types;
+
 use actix_web::{get, post, web, App, HttpServer, Responder};
-use serde::{Deserialize, Serialize};
+use awc;
+use serde_json;
+use std::collections::HashMap;
+use std::env;
+use types::*;
 
-#[derive(Deserialize, Serialize)]
-struct Job {
-    id: String,
-}
-
-#[derive(Deserialize, Serialize)]
-struct NewJob {
-    name: String,
-    param1: String,
-}
-
+// Check Spark job status
 #[get("/job")]
 async fn get_job(_job: web::Json<Job>) -> impl Responder {
     let existent_job = NewJob {
@@ -21,6 +17,7 @@ async fn get_job(_job: web::Json<Job>) -> impl Responder {
     web::Json(existent_job)
 }
 
+// Add new Spark job
 #[post("/job")]
 async fn add_job(_job: web::Json<NewJob>) -> impl Responder {
     let new_job = Job {
@@ -29,10 +26,49 @@ async fn add_job(_job: web::Json<NewJob>) -> impl Responder {
     web::Json(new_job)
 }
 
+/// Get events by within given period
+#[post("/events")]
+async fn get_events(window: web::Json<TimeWindow>) -> impl Responder {
+    let window_clone = window.clone();
+    let hashmap = HashMap::from([
+        (String::from("$gte"), window_clone.left),
+        (String::from("$lte"), window_clone.right),
+    ]);
+
+    let selector = Selector {
+        selector: DateFilter { date: hashmap },
+    };
+
+    // TODO: remove unwraps
+    let db_host = env::var("DB_HOST").unwrap();
+    let db_port = env::var("DB_PORT").unwrap();
+    let db_user = env::var("DB_USER").unwrap();
+    let db_pass = env::var("DB_PASS").unwrap();
+    let db_name = env::var("DB_NAME").unwrap();
+
+    let url = String::from(format!("http://{}:{}/{}/_find", db_host, db_port, db_name));
+
+    let client = awc::Client::default();
+    let req = client
+        .post(url)
+        .basic_auth(db_user, db_pass)
+        .content_type("application/json");
+    let mut res = req.send_json(&serde_json::json!(selector)).await.unwrap();
+
+    let events = res.json::<Events>().limit(65535 * 128).await.unwrap();
+
+    web::Json(events)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().service(get_job).service(add_job))
-        .bind(("127.0.0.1", 8080))?
-        .run()
-        .await
+    HttpServer::new(|| {
+        App::new()
+            .service(get_job)
+            .service(add_job)
+            .service(get_events)
+    })
+    .bind(("0.0.0.0", 8080))?
+    .run()
+    .await
 }
