@@ -248,7 +248,6 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "serde",
- "serde_json",
 ]
 
 [[package]]

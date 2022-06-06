@@ -2,7 +2,6 @@ mod types;
 
 use actix_web::{get, post, web, App, HttpServer, Responder};
 use awc;
-use serde_json;
 use std::collections::HashMap;
 use std::env;
 use types::*;
@@ -53,7 +52,7 @@ async fn get_events(window: web::Json<TimeWindow>) -> impl Responder {
         .post(url)
         .basic_auth(db_user, db_pass)
         .content_type("application/json");
-    let mut res = req.send_json(&serde_json::json!(selector)).await.unwrap();
+    let mut res = req.send_json(&selector).await.unwrap();
 
     let events = res.json::<Events>().limit(65535 * 128).await.unwrap();
 
