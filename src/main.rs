@@ -21,7 +21,6 @@ async fn main() -> std::io::Result<()> {
         "S3_ENDPOINT",
         "S3_ACCESS_KEY",
         "S3_SECRET_KEY",
-        "S3_PATH",
     ];
 
     for key in vars {
