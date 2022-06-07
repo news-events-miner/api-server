@@ -2,6 +2,7 @@ use crate::k8s::*;
 use crate::types::*;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use kube::api::{Api, Patch, PatchParams};
+use kube::error::DiscoveryError::*;
 use kube::error::Error as kube_error;
 use kube::Client;
 use std::collections::HashMap;
@@ -9,11 +10,36 @@ use std::env;
 
 /// Check Spark job status
 #[get("/job")]
-async fn get_job(_job: web::Json<Job>) -> impl Responder {
-    let existent_job = Job {
-        name: String::from("SomeJob"),
-    };
-    web::Json(existent_job)
+async fn get_job(job: web::Json<Job>) -> impl Responder {
+    let client = Client::try_default().await.unwrap();
+    let jobs: Api<SparkApplication> = Api::namespaced(client.clone(), "spark-operator");
+
+    let job = jobs.get_status(job.name.as_str()).await;
+
+    match job {
+        Ok(job) => HttpResponse::Ok().json(job.status),
+        Err(t) => match t {
+            kube_error::Auth(err) => HttpResponse::Unauthorized().json(format!("{}", err)),
+            kube_error::Api(api_err) => {
+                let code = api_err.code;
+                let reason = api_err.reason;
+                let message = api_err.message;
+
+                HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap())
+                    .json(HashMap::from([("reason", reason), ("message", message)]))
+            }
+            kube_error::Discovery(e) => match e {
+                MissingKind(s) | MissingResource(s) | MissingApiGroup(s) => {
+                    HttpResponse::NotFound().json(HashMap::from([("reason", s)]))
+                }
+                _ => todo!(),
+            },
+            kube_error::SerdeError(e) => {
+                HttpResponse::BadRequest().json(HashMap::from([("message", format!("{}", e))]))
+            }
+            _ => todo!(),
+        },
+    }
 }
 
 /// Add new Spark job
