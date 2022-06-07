@@ -10,7 +10,7 @@ use std::env;
 /// Check Spark job status
 #[get("/job")]
 async fn get_job(_job: web::Json<Job>) -> impl Responder {
-    let existent_job = NewJob {
+    let existent_job = Job {
         name: String::from("SomeJob"),
     };
     web::Json(existent_job)
@@ -27,7 +27,6 @@ async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
     let mut env = Vec::new();
 
     for var in [
-        "S3_PATH",
         "S3_ENDPOINT",
         "S3_ACCESS_KEY",
         "S3_SECRET_KEY",
@@ -43,10 +42,15 @@ async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
         })
     }
 
+    env.push(EnvVar {
+        name: "S3_PATH".into(),
+        value: job_params.dataset_path.clone(),
+    });
+
     let app_spec = SparkApplicationSpec {
-        driver: Worker {
+        driver: Driver {
             coreLimit: "1200m".into(),
-            cores: 1,
+            cores: job_params.driver_cores,
             env: env.clone(),
             labels: HashMap::from([("version".into(), "3.1.2".into())]),
             serviceAccount: "spark-k8s-spark".into(),
@@ -54,7 +58,8 @@ async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
         },
         executor: Worker {
             coreLimit: "1200m".into(),
-            cores: 1,
+            cores: job_params.worker_cores,
+            instances: job_params.worker_instances,
             env,
             labels: HashMap::from([("version".into(), "3.1.2".into())]),
             serviceAccount: "spark-k8s-spark".into(),

@@ -3,12 +3,16 @@ use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize)]
 pub struct Job {
-    pub id: String,
+    pub name: String,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct NewJob {
     pub name: String,
+    pub dataset_path: String,
+    pub worker_instances: u32,
+    pub worker_cores: u32,
+    pub driver_cores: u32,
 }
 
 #[derive(Deserialize, Clone)]

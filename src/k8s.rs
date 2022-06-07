@@ -12,7 +12,7 @@ use std::collections::HashMap;
     status = "SparkApplicationStatus"
 )]
 pub struct SparkApplicationSpec {
-    pub driver: Worker,
+    pub driver: Driver,
     pub executor: Worker,
     pub image: String,
     pub imagePullPolicy: String,
@@ -22,13 +22,24 @@ pub struct SparkApplicationSpec {
     pub sparkVersion: String,
     #[serde(rename(serialize = "type", deserialize = "Type"))]
     #[serde(alias = "type")]
-    pub Type: String
+    pub Type: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct Driver {
+    pub coreLimit: String,
+    pub cores: u32,
+    pub env: Vec<EnvVar>,
+    pub labels: HashMap<String, String>,
+    pub serviceAccount: String,
+    pub memory: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct Worker {
     pub coreLimit: String,
-    pub cores: i32,
+    pub instances: u32,
+    pub cores: u32,
     pub env: Vec<EnvVar>,
     pub labels: HashMap<String, String>,
     pub serviceAccount: String,
