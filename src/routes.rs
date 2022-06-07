@@ -94,7 +94,7 @@ async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
     }
 }
 
-/// Get events by within given period
+/// Get events within given time period
 #[post("/events")]
 async fn get_events(window: web::Json<TimeWindow>) -> impl Responder {
     let window_clone = window.clone();
@@ -107,7 +107,7 @@ async fn get_events(window: web::Json<TimeWindow>) -> impl Responder {
         selector: DateFilter { date: hashmap },
     };
 
-    // TODO: remove unwraps
+    // Possible missing values already handled in program entry
     let db_host = env::var("DB_HOST").unwrap();
     let db_port = env::var("DB_PORT").unwrap();
     let db_user = env::var("DB_USER").unwrap();
@@ -125,5 +125,5 @@ async fn get_events(window: web::Json<TimeWindow>) -> impl Responder {
 
     let events = res.json::<Events>().limit(65535 * 128).await.unwrap();
 
-    web::Json(events)
+    HttpResponse::Ok().json(events)
 }
