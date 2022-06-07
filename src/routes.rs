@@ -50,7 +50,7 @@ async fn get_job(job: web::Json<Job>) -> impl Responder {
 #[post("/job")]
 async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
     let client = Client::try_default().await.unwrap();
-    let ssaply = PatchParams::apply("crd_spark").force();
+    let ssaply = PatchParams::apply("spark-operator").force();
 
     let apps: Api<SparkApplication> = Api::namespaced(client.clone(), "spark-operator");
 
@@ -97,7 +97,7 @@ async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
         },
         image: "mkls0/event-extractor-spark:test".into(),
         image_pull_policy: "Always".into(),
-        main_app_file: "file://opt/spark/python/custom_jobs/event_extractor/main.py".into(),
+        main_app_file: "local:///opt/spark/python/custom_jobs/event_extractor/main.py".into(),
         mode: "cluster".into(),
         python_version: "3".into(),
         spark_version: "3.1.2".into(),
@@ -113,7 +113,7 @@ async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
         .await;
 
     match res {
-        Ok(app) => HttpResponse::Accepted().json(app),
+        Ok(_) => HttpResponse::Accepted().json("Application created successfully"),
         Err(err) => handle_kube_error(err),
     }
 }
