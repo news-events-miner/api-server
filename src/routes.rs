@@ -75,29 +75,29 @@ async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
 
     let app_spec = SparkApplicationSpec {
         driver: Driver {
-            coreLimit: "1200m".into(),
+            core_limit: "1200m".into(),
             cores: job_params.driver_cores,
             env: env.clone(),
             labels: HashMap::from([("version".into(), "3.1.2".into())]),
-            serviceAccount: "spark-k8s-spark".into(),
+            service_account: "spark-k8s-spark".into(),
             memory: "1024M".into(),
         },
         executor: Worker {
-            coreLimit: "1200m".into(),
+            core_limit: "1200m".into(),
             cores: job_params.worker_cores,
             instances: job_params.worker_instances,
             env,
             labels: HashMap::from([("version".into(), "3.1.2".into())]),
-            serviceAccount: "spark-k8s-spark".into(),
+            service_account: "spark-k8s-spark".into(),
             memory: "2048".into(),
         },
         image: "mkls0/event-extractor-spark:test".into(),
-        imagePullPolicy: "Always".into(),
-        mainApplicationFile: "file://opt/spark/python/custom_jobs/event_extractor/main.py".into(),
+        image_pull_policy: "Always".into(),
+        main_app_file: "file://opt/spark/python/custom_jobs/event_extractor/main.py".into(),
         mode: "cluster".into(),
-        pythonVersion: "3".into(),
-        sparkVersion: "3.1.2".into(),
-        Type: "Python".into(),
+        python_version: "3".into(),
+        spark_version: "3.1.2".into(),
+        app_type: "Python".into(),
     };
 
     let new_app = SparkApplication::new(job_params.name.as_str(), app_spec);

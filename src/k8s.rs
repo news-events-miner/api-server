@@ -15,34 +15,41 @@ pub struct SparkApplicationSpec {
     pub driver: Driver,
     pub executor: Worker,
     pub image: String,
-    pub imagePullPolicy: String,
-    pub mainApplicationFile: String,
+    #[serde(rename = "imagePullPolicy")]
+    pub image_pull_policy: String,
+    #[serde(rename = "mainApplicationFile")]
+    pub main_app_file: String,
     pub mode: String,
-    pub pythonVersion: String,
-    pub sparkVersion: String,
-    #[serde(rename(serialize = "type", deserialize = "Type"))]
-    #[serde(alias = "type")]
-    pub Type: String,
+    #[serde(rename = "pythonVersion")]
+    pub python_version: String,
+    #[serde(rename = "sparkVersion")]
+    pub spark_version: String,
+    #[serde(rename = "type")]
+    pub app_type: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct Driver {
-    pub coreLimit: String,
+    #[serde(rename = "coreLimit")]
+    pub core_limit: String,
     pub cores: u32,
     pub env: Vec<EnvVar>,
     pub labels: HashMap<String, String>,
-    pub serviceAccount: String,
+    #[serde(rename = "serviceAccount")]
+    pub service_account: String,
     pub memory: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct Worker {
-    pub coreLimit: String,
+    #[serde(rename = "coreLimit")]
+    pub core_limit: String,
     pub instances: u32,
     pub cores: u32,
     pub env: Vec<EnvVar>,
     pub labels: HashMap<String, String>,
-    pub serviceAccount: String,
+    #[serde(rename = "serviceAccount")]
+    pub service_account: String,
     pub memory: String,
 }
 
@@ -54,7 +61,8 @@ pub struct EnvVar {
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct SparkApplicationStatus {
-    pub applicationState: State,
+    #[serde(rename = "applicationState")]
+    pub app_state: State,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
