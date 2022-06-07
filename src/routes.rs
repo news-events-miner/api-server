@@ -8,6 +8,30 @@ use kube::Client;
 use std::collections::HashMap;
 use std::env;
 
+fn handle_kube_error(t: kube::error::Error) -> HttpResponse {
+    match t {
+        kube_error::Auth(err) => HttpResponse::Unauthorized().json(format!("{}", err)),
+        kube_error::Api(api_err) => {
+            let code = api_err.code;
+            let reason = api_err.reason;
+            let message = api_err.message;
+
+            HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap())
+                .json(HashMap::from([("reason", reason), ("message", message)]))
+        }
+        kube_error::Discovery(e) => match e {
+            MissingKind(s) | MissingResource(s) | MissingApiGroup(s) => {
+                HttpResponse::NotFound().json(HashMap::from([("reason", s)]))
+            }
+            _ => todo!(),
+        },
+        kube_error::SerdeError(e) => {
+            HttpResponse::BadRequest().json(HashMap::from([("message", format!("{}", e))]))
+        }
+        _ => todo!(),
+    }
+}
+
 /// Check Spark job status
 #[get("/job")]
 async fn get_job(job: web::Json<Job>) -> impl Responder {
@@ -18,27 +42,7 @@ async fn get_job(job: web::Json<Job>) -> impl Responder {
 
     match job {
         Ok(job) => HttpResponse::Ok().json(job.status),
-        Err(t) => match t {
-            kube_error::Auth(err) => HttpResponse::Unauthorized().json(format!("{}", err)),
-            kube_error::Api(api_err) => {
-                let code = api_err.code;
-                let reason = api_err.reason;
-                let message = api_err.message;
-
-                HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap())
-                    .json(HashMap::from([("reason", reason), ("message", message)]))
-            }
-            kube_error::Discovery(e) => match e {
-                MissingKind(s) | MissingResource(s) | MissingApiGroup(s) => {
-                    HttpResponse::NotFound().json(HashMap::from([("reason", s)]))
-                }
-                _ => todo!(),
-            },
-            kube_error::SerdeError(e) => {
-                HttpResponse::BadRequest().json(HashMap::from([("message", format!("{}", e))]))
-            }
-            _ => todo!(),
-        },
+        Err(err) => handle_kube_error(err),
     }
 }
 
@@ -110,18 +114,7 @@ async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
 
     match res {
         Ok(app) => HttpResponse::Accepted().json(app),
-        Err(t) => match t {
-            kube_error::Auth(err) => HttpResponse::Unauthorized().json(format!("{}", err)),
-            kube_error::Api(api_err) => {
-                let code = api_err.code;
-                let reason = api_err.reason;
-                let message = api_err.message;
-
-                HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap())
-                    .json(HashMap::from([("reason", reason), ("message", message)]))
-            }
-            _ => todo!(),
-        },
+        Err(err) => handle_kube_error(err),
     }
 }
 
