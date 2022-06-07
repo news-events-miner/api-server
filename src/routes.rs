@@ -1,20 +1,17 @@
 use crate::k8s::*;
 use crate::types::*;
-use actix_web::{get, post, web, Responder};
-// use apiexts::CustomResourceDefinition;
-use awc;
-// use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1 as apiexts;
+use actix_web::{get, post, web, HttpResponse, Responder};
 use kube::api::{Api, Patch, PatchParams};
+use kube::error::Error as kube_error;
 use kube::Client;
 use std::collections::HashMap;
 use std::env;
-use uuid::Uuid;
 
 /// Check Spark job status
 #[get("/job")]
 async fn get_job(_job: web::Json<Job>) -> impl Responder {
     let existent_job = NewJob {
-        name: String::from("SomeJob")
+        name: String::from("SomeJob"),
     };
     web::Json(existent_job)
 }
@@ -72,18 +69,29 @@ async fn add_job(job_params: web::Json<NewJob>) -> impl Responder {
         Type: "Python".into(),
     };
 
-    // TODO: get from params
-    let new_id = format!("{}-{}", job_params.name, Uuid::new_v4());
-    let new_app = SparkApplication::new("spark-app", app_spec);
+    let new_app = SparkApplication::new(job_params.name.as_str(), app_spec);
 
     println!("Applying new Spark App");
 
     let res = apps
-        .patch("spark-app", &ssaply, &Patch::Apply(&new_app))
-        .await
-        .unwrap();
+        .patch(job_params.name.as_str(), &ssaply, &Patch::Apply(&new_app))
+        .await;
 
-    web::Json(res)
+    match res {
+        Ok(app) => HttpResponse::Accepted().json(app),
+        Err(t) => match t {
+            kube_error::Auth(err) => HttpResponse::Unauthorized().json(format!("{}", err)),
+            kube_error::Api(api_err) => {
+                let code = api_err.code;
+                let reason = api_err.reason;
+                let message = api_err.message;
+
+                HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap())
+                    .json(HashMap::from([("reason", reason), ("message", message)]))
+            }
+            _ => todo!(),
+        },
+    }
 }
 
 /// Get events by within given period
@@ -106,7 +114,7 @@ async fn get_events(window: web::Json<TimeWindow>) -> impl Responder {
     let db_pass = env::var("DB_PASS").unwrap();
     let db_name = env::var("DB_NAME").unwrap();
 
-    let url = String::from(format!("http://{}:{}/{}/_find", db_host, db_port, db_name));
+    let url = format!("http://{}:{}/{}/_find", db_host, db_port, db_name);
 
     let client = awc::Client::default();
     let req = client
